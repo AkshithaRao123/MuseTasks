@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Task Form</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-100 py-10">
+  <div class="max-w-5xl mx-auto bg-white p-8 rounded-lg shadow-md">
+    <h1 class="text-3xl font-bold text-center mb-8">Task Form</h1>
+
+    <form id="taskForm" class="space-y-8" action="/submit" method="POST">
+        <input type="hidden" name="user_id" value="{{ user_id }}">
+        <input type="hidden" name="task_count" id="taskCountInput">
+      
+        <div id="tasksContainer"></div>
+      
+        <div class="flex justify-between">
+          <button type="button" id="addTaskButton"
+            class="bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded">
+            Add Task
+          </button>
+          <button type="submit"
+            class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded">
+            Submit All
+          </button>
+        </div>
+    </form>
+  </div>
+
+  <script>
+    let taskCount = 0;
+
+    function createTaskForm() {
+      taskCount++;
+      const taskHTML = `
+        <div class="task p-6 border border-gray-300 rounded-lg mb-6 bg-gray-50 space-y-5">
+          <h2 class="text-2xl font-semibold mb-4">Task ${taskCount}</h2>
+
+          <div>
+            <label class="block font-medium mb-1">Task Name <span class="text-red-500">*</span></label>
+            <input type="text" class="w-full border p-2 rounded task_name" placeholder="Enter the Task Name">
+            <p class="error-message text-red-500 text-sm hidden">Task Name is required.</p>
+          </div>
+
+          <div>
+            <label class="block font-medium mb-1">Priority <span class="text-red-500">*</span></label>
+            <select class="w-full border p-2 rounded priority">
+              <option value="">Select Priority</option>
+              <option>High</option>
+              <option>Medium</option>
+              <option>Low</option>
+            </select>
+            <p class="error-message text-red-500 text-sm hidden">Priority is required.</p>
+          </div>
+
+          <div>
+            <label class="block font-medium mb-1">Description <span class="text-red-500">*</span></label>
+            <textarea class="w-full border p-2 rounded description" placeholder="Enter a detailed description"></textarea>
+            <p class="error-message text-red-500 text-sm hidden">Description is required.</p>
+          </div>
+
+          <div>
+            <label class="block font-medium mb-1">Estimated Time <span class="text-red-500">*</span></label>
+            <div class="flex gap-3">
+              <input type="number" min="1" class="w-full border p-2 rounded time_value"
+                placeholder="Enter time">
+              <select class="border p-2 rounded time_unit">
+                <option value="">Select Unit</option>
+                <option>Minutes</option>
+                <option>Hours</option>
+              </select>
+            </div>
+            <p class="error-message text-red-500 text-sm hidden">Both time value and unit are required.</p>
+          </div>
+        </div>
+      `;
+      document.getElementById('tasksContainer').insertAdjacentHTML('beforeend', taskHTML);
+    }
+
+    function validateAllTasks() {
+      let isValid = true;
+      const tasks = [];
+
+      document.querySelectorAll('.task').forEach(task => {
+        const taskName = task.querySelector('.task_name');
+        const taskNameError = task.querySelector('.task_name + .error-message');
+
+        const priority = task.querySelector('.priority');
+        const priorityError = task.querySelector('.priority + .error-message');
+
+        const description = task.querySelector('.description');
+        const descriptionError = task.querySelector('.description + .error-message');
+
+        const timeValue = task.querySelector('.time_value');
+        const timeUnit = task.querySelector('.time_unit');
+        const timeError = task.querySelector('.time_unit').parentElement.nextElementSibling;
+
+        // Validate Task Name
+        if (taskName.value.trim() === '') {
+          taskNameError.classList.remove('hidden');
+          isValid = false;
+        } else {
+          taskNameError.classList.add('hidden');
+        }
+
+        // Validate Priority
+        if (priority.value === '') {
+          priorityError.classList.remove('hidden');
+          isValid = false;
+        } else {
+          priorityError.classList.add('hidden');
+        }
+
+        // Validate Description
+        if (description.value.trim() === '') {
+          descriptionError.classList.remove('hidden');
+          isValid = false;
+        } else {
+          descriptionError.classList.add('hidden');
+        }
+
+        // Validate Estimated Time
+        if (timeValue.value.trim() === '' || timeUnit.value === '') {
+          timeError.classList.remove('hidden');
+          isValid = false;
+        } else {
+          timeError.classList.add('hidden');
+        }
+
+        if (isValid) {
+          tasks.push({
+            taskName: taskName.value,
+            priority: priority.value,
+            description: description.value,
+            estimatedTime: {
+              value: timeValue.value,
+              unit: timeUnit.value
+            }
+          });
+        }
+      });
+
+      return { isValid, tasks };
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+  createTaskForm(); // Load first task on page load
+
+  document.getElementById('addTaskButton').addEventListener('click', () => {
+    createTaskForm();
+  });
+
+  document.getElementById('taskForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+
+    const validationResult = validateAllTasks();
+    if (validationResult.isValid) {
+      // Include the task count in the JSON payload
+      const payload = {
+        user_id: document.querySelector('input[name="user_id"]').value,
+        task_count: taskCount,
+        tasks: validationResult.tasks,
+      };
+
+      fetch(`/submit`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      })
+        .then(response => response.json())
+        .then(data => {
+          alert('Tasks submitted successfully!');
+        })
+        .catch((error) => {
+          console.error('Error:', error);
+        });
+    } else {
+      alert('Please fill out all required fields in every task.');
+    }
+  });
+});
+  </script>
+</body>
+
+</html>
