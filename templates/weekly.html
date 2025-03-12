@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Weekly Task Form</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-100 py-10">
+  <div class="max-w-5xl mx-auto bg-white p-8 rounded-lg shadow-md">
+    <h1 class="text-3xl font-bold text-center mb-8">Weekly Task Form</h1>
+
+    <form id="taskForm" class="space-y-8" action="/submit" method="POST">
+        <input type="hidden" name="user_id" value="{{ user_id }}">
+        <input type="hidden" name="task_count" id="taskCountInput">
+      
+        <div id="tasksContainer"></div>
+      
+        <div class="flex justify-between">
+          <button type="button" id="addTaskButton"
+            class="bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded">
+            Add Task
+          </button>
+          <button type="button" id="removeTaskButton"
+            class="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded">
+            Remove Last Task
+          </button>
+          <button type="submit"
+            class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded">
+            Submit All
+          </button>
+        </div>
+    </form>
+  </div>
+
+  <script>
+    let taskCount = 0;
+
+    function createTaskForm() {
+      const currentTasks = document.querySelectorAll('.task').length;
+      taskCount = currentTasks + 1;
+      const taskHTML = `
+        <div class="task p-6 border border-gray-300 rounded-lg mb-6 bg-gray-50 space-y-5">
+          <h2 class="text-2xl font-semibold mb-4">Task ${taskCount}</h2>
+
+          <div>
+            <label class="block font-medium mb-1">Task Name <span class="text-red-500">*</span></label>
+            <input type="text" class="w-full border p-2 rounded task_name" placeholder="Enter the Task Name">
+            <p class="error-message text-red-500 text-sm hidden">Task Name is required.</p>
+          </div>
+
+          <div>
+            <label class="block font-medium mb-1">Why? <span class="text-red-500">*</span></label>
+            <textarea class="w-full border p-2 rounded task_why" placeholder="Enter why this task is important"></textarea>
+            <p class="error-message text-red-500 text-sm hidden">The answer is required.</p>
+          </div>
+
+          <div>
+            <label class="block font-medium mb-1">How? <span class="text-red-500">*</span></label>
+            <textarea class="w-full border p-2 rounded task_how" placeholder="Enter how to complete this task"></textarea>
+            <p class="error-message text-red-500 text-sm hidden">The answer is required.</p>
+          </div>
+
+          <div>
+            <label class="block font-medium mb-1">Dependencies <span class="text-red-500">*</span></label>
+            <select class="w-full border p-2 rounded dependencies">
+              <option value="">Select Dependencies</option>
+              <option>Manoj</option>
+              <option>Prashanth</option>
+              <option>Saranya</option>
+              <option>Sandesh</option>
+              <option>Vivek</option>
+              <option>Pavithra</option>
+              <option>Adi</option>
+              <option>Akshitha</option>
+              <option>Sharon</option>
+              <option>None</option>
+            </select>
+            <p class="error-message text-red-500 text-sm hidden">Dependency is required.</p>
+          </div>
+
+          <div>
+            <label class="block font-medium mb-1">Estimated Time <span class="text-red-500">*</span></label>
+            <div class="flex gap-3">
+              <input type="number" min="1" class="w-full border p-2 rounded time_value"
+                placeholder="Enter time">
+              <select class="border p-2 rounded time_unit">
+                <option value="">Select Unit</option>
+                <option>Minutes</option>
+                <option>Hours</option>
+              </select>
+            </div>
+            <p class="error-message text-red-500 text-sm hidden">Both time value and unit are required.</p>
+          </div>
+
+          <div>
+            <label class="block font-medium mb-1">Great Performance <span class="text-red-500">*</span></label>
+            <textarea class="w-full border p-2 rounded great_performance" placeholder="Enter your idea of great performance in executing the task"></textarea>
+            <p class="error-message text-red-500 text-sm hidden">Description is required.</p>
+          </div>
+
+          <div>
+            <label class="block font-medium mb-1">Good Performance <span class="text-red-500">*</span></label>
+            <textarea class="w-full border p-2 rounded good_performance" placeholder="Enter your idea of good performance in executing the task"></textarea>
+            <p class="error-message text-red-500 text-sm hidden">Description is required.</p>
+          </div>
+
+          <div>
+            <label class="block font-medium mb-1">Bad Performance <span class="text-red-500">*</span></label>
+            <textarea class="w-full border p-2 rounded bad_performance" placeholder="Enter your idea of bad performance in executing the task"></textarea>
+            <p class="error-message text-red-500 text-sm hidden">Description is required.</p>
+          </div>
+        </div>
+      `;
+      document.getElementById('tasksContainer').insertAdjacentHTML('beforeend', taskHTML);
+    }
+
+    function removeLastTask() {
+  const tasks = document.querySelectorAll('.task');
+  if (tasks.length > 0) {
+    tasks[tasks.length - 1].remove();
+    taskCount--;
+  } else {
+    alert('No tasks to remove!');
+  }
+}
+function updateTaskNumbers() {
+  const tasks = document.querySelectorAll('.task');
+  tasks.forEach((task, index) => {
+    task.querySelector('h2').textContent = `Task ${index + 1}`;
+  });
+}
+
+
+    function validateAllTasks() {
+      let isValid = true;
+      const tasks = [];
+
+      document.querySelectorAll('.task').forEach(task => {
+        const taskName = task.querySelector('.task_name');
+        const taskNameError = task.querySelector('.task_name + .error-message');
+
+        const taskWhy = task.querySelector('.task_why');
+        const taskWhyError = task.querySelector('.task_why + .error-message');
+
+        const taskHow = task.querySelector('.task_how');
+        const taskHowError = task.querySelector('.task_how + .error-message');
+
+        const Dependencies = task.querySelector('.dependencies');
+        const DependenciesError = task.querySelector('.dependencies + .error-message');
+
+        const timeValue = task.querySelector('.time_value');
+        const timeUnit = task.querySelector('.time_unit');
+        const timeError = task.querySelector('.time_unit').parentElement.nextElementSibling;
+
+        const greatPerformance = task.querySelector('.great_performance');
+        const greatPerformanceError = task.querySelector('.great_performance + .error-message');
+
+        const goodPerformance = task.querySelector('.good_performance');
+        const goodPerformanceError = task.querySelector('.good_performance + .error-message');
+
+        const badPerformance = task.querySelector('.bad_performance');
+        const badPerformanceError = task.querySelector('.bad_performance + .error-message');
+
+        // Validate Task Name
+        if (taskName.value.trim() === '') {
+          taskNameError.classList.remove('hidden');
+          isValid = false;
+        } else {
+          taskNameError.classList.add('hidden');
+        }
+
+        // Validate Why
+        if (taskWhy.value === '') {
+          taskWhyError.classList.remove('hidden');
+          isValid = false;
+        } else {
+          taskWhyError.classList.add('hidden');
+        }
+
+        // Validate How
+        if (taskHow.value === '') {
+          taskHowError.classList.remove('hidden');
+          isValid = false;
+        } else {
+          taskHowError.classList.add('hidden');
+        }
+
+        // Validate Dependencies
+        if (Dependencies.value === '') {
+          DependenciesError.classList.remove('hidden');
+          isValid = false;
+        } else {
+          DependenciesError.classList.add('hidden');
+        }
+
+        // Validate Estimated Time
+        if (timeValue.value.trim() === '' || timeUnit.value === '') {
+          timeError.classList.remove('hidden');
+          isValid = false;
+        } else {
+          timeError.classList.add('hidden');
+        }
+
+        if (isValid) {
+          tasks.push({
+            taskName: taskName.value,
+            taskWhy: taskWhy.value,
+            taskHow: taskHow.value,
+            Dependencies: Dependencies.value,
+            greatPerformance: greatPerformance.value,
+            goodPerformance: goodPerformance.value,
+            badPerformance: badPerformance.value,
+            estimatedTime: {
+              value: timeValue.value,
+              unit: timeUnit.value
+            }
+          });
+        }
+
+        // Validate Great performance
+        if (greatPerformance.value === '') {
+          greatPerformanceError.classList.remove('hidden');
+          isValid = false;
+        } else {
+          greatPerformanceError.classList.add('hidden');
+        }
+
+        // Validate Good performance
+        if (goodPerformance.value === '') {
+          goodPerformanceError.classList.remove('hidden');
+          isValid = false;
+        } else {
+          goodPerformanceError.classList.add('hidden');
+        }
+
+        // Validate Bad performance
+        if (badPerformance.value === '') {
+          badPerformanceError.classList.remove('hidden');
+          isValid = false;
+        } else {
+          badPerformanceError.classList.add('hidden');
+        }
+
+      });
+
+      return { isValid, tasks };
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+  createTaskForm(); // Load first task on page load
+
+  document.getElementById('addTaskButton').addEventListener('click', () => {
+    createTaskForm();
+  });
+  document.getElementById('removeTaskButton').addEventListener('click', removeLastTask);
+
+
+  document.getElementById('taskForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+
+    const validationResult = validateAllTasks();
+    if (validationResult.isValid) {
+      // Include the task count in the JSON payload
+      const payload = {
+        user_id: document.querySelector('input[name="user_id"]').value,
+        task_count: taskCount,
+        tasks: validationResult.tasks,
+      };
+
+      fetch(`/submit`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      })
+        .then(response => response.json())
+        .then(data => {
+          alert('Tasks submitted successfully!');
+        })
+        .catch((error) => {
+          console.error('Error:', error);
+        });
+    } else {
+      alert('Please fill out all required fields in every task.');
+    }
+  });
+});
+  </script>
+</body>
+
+</html>
