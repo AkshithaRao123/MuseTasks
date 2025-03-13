@@ -10,8 +10,10 @@ import aiohttp
 import discord
 from discord import app_commands
 from discord.ext import commands
+import asyncio
 import threading
 import re
+
 load_dotenv()
 
 app = Flask(__name__)
@@ -67,7 +69,6 @@ def send_tasks_to_db(user_id, tasks):
         user_tasks_collection.insert_one(task_data)
 
 
-
 def send_tasks_to_discord(user_id):
     webhook_url = f"{os.getenv('WEBHOOK_DAILY')}?wait=true"
     user_tasks = list(user_tasks_collection.find(
@@ -78,8 +79,9 @@ def send_tasks_to_discord(user_id):
     fields = []
 
     for i, task in enumerate(user_tasks, 0):
+        checkmark = "✅" if task.get("completed", False) else ""
         fields.append({
-                "name": f"📌 **Task {i+1}: {task['task_name']}**  |  🏷 **Priority:** {task['priority']}",
+                "name": f"📌 **Task {i+1}: {task['task_name']}**  |  🏷 **Priority:** {task['priority']} {checkmark}",
                 "value": 
                     f"""📖 **Description:**\n{task['description']}\n
                         \n⏳ **Estimated Time:** {task['estimated_time']}\n
@@ -112,10 +114,44 @@ def send_tasks_to_discord(user_id):
             "date_today": date_today, 
             "task_messages": message_id
         }
-        daily_task_messages_collection.insert_one(message_details)
+        msg = daily_task_messages_collection.insert_one(message_details)
+        return msg.inserted_id
 
     else:
         print("Failed to send message:", response.text)
+
+async def delete_old_msgs(user_id, latest_message_id):
+    old_messages = list(
+        daily_task_messages_collection.find(
+            {"user_id": user_id, "date_today": date_today, "_id": {"$ne": latest_message_id}}
+        )
+    )
+    print("latest message: ", latest_message_id)
+    print(old_messages)
+
+    # Delete old messages from Discord and the database
+    async with aiohttp.ClientSession() as session:
+        webhook = discord.Webhook.from_url(webhook_url, session=session)
+
+        for msg in old_messages:
+            old_message_id = msg["task_messages"]
+
+            try:
+                # Fetch and delete the old message
+                await webhook.delete_message(old_message_id)
+                print(f"✅ Deleted old message: {old_message_id}")
+            except discord.NotFound:
+                print(f"❌ Message {old_message_id} not found — possibly deleted already.")
+            except discord.Forbidden:
+                print("🚫 Webhook lacks permission to delete the message.")
+            except Exception as e:
+                print(f"⚠️ Error deleting message {old_message_id}: {e}")
+
+    # Clean up the old messages from the database
+    daily_task_messages_collection.delete_many(
+        {"user_id": user_id, "date_today": date_today, "_id": {"$ne": latest_message_id}}
+    )
+
 
 
 class CompletionSelect(discord.ui.Select):
@@ -172,11 +208,11 @@ class CompletionSelect(discord.ui.Select):
                         await interaction.response.send_message("✅ Tasks marked as complete!", ephemeral=True)
 
                 except discord.NotFound:
-                    await interaction.response.send_message("❌ Could not find the message to edit.", ephemeral=True)
+                    await interaction.response.send_message("Could not find the message to edit.", ephemeral=True)
                 except discord.Forbidden:
-                    await interaction.response.send_message("❌ Webhook lacks permission to edit the message.", ephemeral=True)
+                    await interaction.response.send_message("Webhook lacks permission to edit the message.", ephemeral=True)
                 except Exception as e:
-                    await interaction.response.send_message(f"❌ Error: {str(e)}", ephemeral=True)
+                    await interaction.response.send_message(f"Error: {str(e)}", ephemeral=True)
 
 
 class CompletionView(discord.ui.View):
@@ -199,7 +235,6 @@ class CompletionView(discord.ui.View):
 
 @app.route('/submit', methods=['POST'])
 def submit():
-
     data = request.get_json()
 
     if not data:
@@ -212,10 +247,17 @@ def submit():
     if task_count is None or len(tasks) != task_count:
         return jsonify({"status": "error", "message": "Task count mismatch"}), 400
 
+    # Save tasks to the database
     send_tasks_to_db(user_id, tasks)
-    send_tasks_to_discord(user_id)
+
+    # Send tasks to Discord and get the new message ID
+    message_id = send_tasks_to_discord(user_id)
+
+    # Ensure old messages get cleaned up (force async call from sync Flask)
+    bot.loop.create_task(delete_old_msgs(user_id, message_id))
 
     return jsonify({"status": "success", "message": "Tasks submitted successfully!"})
+
 
 
 if __name__ == '__main__':
