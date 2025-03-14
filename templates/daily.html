@@ -69,6 +69,23 @@
           </div>
 
           <div>
+            <label class="block font-medium mb-1">Dependencies <span class="text-red-500">*</span></label>
+            <select class="w-full dependencies" multiple placeholder="Select dependencies...">
+              <option value="Manoj">Manoj</option>
+              <option value="Prashanth">Prashanth</option>
+              <option value="Saranya">Saranya</option>
+              <option value="Sandesh">Sandesh</option>
+              <option value="Vivek">Vivek</option>
+              <option value="Pavithra">Pavithra</option>
+              <option value="Adi">Adi</option>
+              <option value="Akshitha">Akshitha</option>
+              <option value="Sharon">Sharon</option>
+              <option value="None">None</option>
+            </select>
+            <p class="error-message text-red-500 text-sm hidden">Dependency is required.</p>
+          </div>
+
+          <div>
             <label class="block font-medium mb-1">Estimated Time <span class="text-red-500">*</span></label>
             <div class="flex gap-3">
               <input type="number" min="1" class="w-full border p-2 rounded time_value" placeholder="Enter time" required>
@@ -80,6 +97,7 @@
             </div>
             <p class="error-message text-red-500 text-sm hidden">Both time value and unit are required.</p>
           </div>
+
         </div>
       `;
       document.getElementById('tasksContainer').insertAdjacentHTML('beforeend', taskHTML);
@@ -109,6 +127,9 @@
         const description = task.querySelector('.description');
         const descriptionError = task.querySelector('.description + .error-message');
 
+        const dependencies = task.querySelector('.dependencies');
+        const dependenciesError = task.querySelector('.dependencies + .error-message');
+
         const timeValue = task.querySelector('.time_value');
         const timeUnit = task.querySelector('.time_unit');
         const timeError = task.querySelector('.time_unit').parentElement.nextElementSibling;
@@ -137,6 +158,13 @@
           descriptionError.classList.add('hidden');
         }
 
+        if (dependencies.value === '') {
+          dependenciesError.classList.remove('hidden');
+          isValid = false;
+        } else {
+          dependenciesError.classList.add('hidden');
+        }
+
         // Validate Estimated Time
         if (timeValue.value.trim() === '' || timeUnit.value === '') {
           timeError.classList.remove('hidden');
@@ -150,6 +178,7 @@
             taskName: taskName.value,
             priority: priority.value,
             description: description.value,
+            dependencies: dependencies.value,
             estimatedTime: {
               value: timeValue.value,
               unit: timeUnit.value
