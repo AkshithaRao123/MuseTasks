@@ -336,7 +336,7 @@ if __name__ == '__main__':
     async def task_daily(interaction: discord.Interaction):
         user_id = interaction.user.id
         # Redirect the user to the Flask server's form page
-        form_url = f"https://musetasks.onrender.com:5000/form?user_id={user_id}"
+        form_url = f"https://musetasks.onrender.com/form?user_id={user_id}"
         await interaction.response.send_message(f"Please fill out your tasks here: {form_url}", ephemeral=True)
 
     @bot.tree.command(name="complete_task_daily", description="Mark completion of your daily tasks", guild=GUILD)
